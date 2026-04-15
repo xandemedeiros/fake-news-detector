@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 import pandas as pd
 from datetime import datetime
@@ -63,24 +64,45 @@ def defensor(state: AgentState) -> AgentState:
     """
     
     resposta = llm.invoke(prompt)
-    return {**state, "analise_xyz": [f"Defesa: {resposta.content}"]}
+    return {
+    **state, 
+    "analise_xyz": [str(resposta.content)]
+    }
 
 # AGENTE JUIZ
 def juiz(state: AgentState) -> AgentState:
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] JUIZ: Analisando e emitindo veredito...")
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] JUIZ: Analisando provas para veredito final...")
     
+    contexto = f"""
+    NOTÍCIA: {state['texto_original']}
+    PESQUISA WEB: {state['evidencias_web']}
+    HISTÓRICO LOCAL: {state['evidencias_csv']}
+    DEFESA/CONTEXTO: {state['analise_xyz']}
+    """
+
     prompt = f"""
-    Analise as evidências abaixo e dê um veredito de REAL, FAKE ou IMPRECISO.
-    Evidências: {state['analise_xyz']}
-    Web: {state['evidencias_web']}
+    Você é o Chefe de Redação e Verificador Chefe. Baseado no contexto abaixo, decida se a notícia é REAL, FAKE ou IMPRECISO.
+    
+    {contexto}
+
+    Sua resposta deve seguir ESTRITAMENTE este formato:
+    VEREDITO: [Escreva REAL, FAKE ou IMPRECISO]
+    SCORE: [Um número de 0 a 100 baseado na probabilidade de ser verdade]
+    JUSTIFICATIVA: [Um resumo de 2 linhas do porquê dessa decisão]
     """
     
     resposta = llm.invoke(prompt)
     conteudo = str(resposta.content)
 
+    score_match = re.search(r"SCORE:\s*(\d+)", conteudo)
+    score_final = int(score_match.group(1)) if score_match else 50
+
+    veredito_match = re.search(r"VEREDITO:\s*(REAL|FAKE|IMPRECISO)", conteudo, re.IGNORECASE)
+    veredito_final = veredito_match.group(1).upper() if veredito_match else "ANALISADO"
+
     return {
         **state, 
-        "veredito_final": conteudo, 
-        "score": 85, # Exemplo de score
-        "analise_xyz": ["Análise final concluída pelo Juiz."] 
+        "veredito_final": veredito_final, 
+        "score": score_final,
+        "analise_xyz": [conteudo]
     }

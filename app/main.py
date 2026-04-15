@@ -21,6 +21,7 @@ async def analisar_noticia(request: AnalysisRequest):
         initial_state= {
             "texto_original": request.texto,
             "analise_xyz": [],
+            "evidencias_web": [],
             "passo_atual": "inicio"
         }
     
@@ -29,11 +30,12 @@ async def analisar_noticia(request: AnalysisRequest):
     
         return {
             "veredito": resultado.get("veredito_final", "NÃO IDENTIFICADO"),
-            "confianca": f"{resultado.get("score", 0)}%",
+            "confianca": f"{resultado.get('score', 0)}%",
             "motivos_xyz": resultado.get("analise_xyz", []),
-            "fontes_verificadas": [f.get("url") for f in resultado.get("evidencias_web", []) if "url in f"],
+            "fontes_verificadas": [f.get('url') for f in resultado.get('evidencias_web', []) if isinstance(f, dict) and f.get('url')],
             "tempo_execucao": tempo_total
-    }
+        }
+    
     except Exception as e:
         print(f"Erro interno: {e}")
         raise HTTPException(status_code=500, detail="Erro interno no processamento dos agentes.")
