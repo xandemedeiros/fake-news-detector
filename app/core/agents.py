@@ -1,9 +1,12 @@
 import os
+from dotenv import load_dotenv
 import pandas as pd
 from datetime import datetime
 from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
 from app.core.state import AgentState
+
+load_dotenv()
 
 llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
 search_tool = TavilySearch(max_results=3)
@@ -64,21 +67,20 @@ def defensor(state: AgentState) -> AgentState:
 
 # AGENTE JUIZ
 def juiz(state: AgentState) -> AgentState:
-
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] JUIZ: Analisando provas e emitindo veredito...")
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] JUIZ: Analisando e emitindo veredito...")
     
     prompt = f"""
-    Com base nas investigações:
-    - Histórico: {state['evidencias_csv']}
-    - Web: {state['evidencias_web']}
-    - Defesa: {state['analise_xyz']}
-    
-    Emita um veredito sobre a notícia: "{state['texto_original']}"
-    Use o formato:
-    VEREDITO: [REAL/FAKE/IMPRECISO]
-    SCORE: [0-100]
-    MOTIVOS: [Liste X, Y, Z com base nas provas]
+    Analise as evidências abaixo e dê um veredito de REAL, FAKE ou IMPRECISO.
+    Evidências: {state['analise_xyz']}
+    Web: {state['evidencias_web']}
     """
     
     resposta = llm.invoke(prompt)
-    return {**state, "veredito_final": resposta.content, "score": 100}
+    conteudo = str(resposta.content)
+
+    return {
+        **state, 
+        "veredito_final": conteudo, 
+        "score": 85, # Exemplo de score
+        "analise_xyz": ["Análise final concluída pelo Juiz."] 
+    }
