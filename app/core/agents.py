@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import re
 from dotenv import load_dotenv
@@ -6,7 +7,6 @@ from datetime import datetime
 from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
 from app.core.state import AgentState
-from __future__ import annotations
 import logging
 from functools import lru_cache
 
@@ -62,33 +62,61 @@ def _buscar_historico(texto: str) -> str:
                 f"Padrão semelhante detectado na base Fake.br "
                 f"(keyword: '{kw}', {mascara.sum()} ocorrência(s))."
             )
-        return ""
+    return ""
+
+def _formatar_evidencias(evidencias: list) -> str:
+    linhas = []
+    for r in evidencias or []:
+        if isinstance(r, dict):
+            url = r.get("url", "sem url")
+            content = r.get("content", "")[:300]
+            linhas.append(f"- [{url}]: {content}")
+        elif isinstance(r, str):
+            linhas.append(f"- {r[:300]}")
+    return "\n".join(linhas) or "Nenhuma evidência coletada."
     
 # AGENTE INVESTIGADOR - Coleta evidências externas e verifica o hostório local
 def investigador(state: AgentState) -> AgentState:
     texto = state["texto_original"]
-    logger.info("INVESTIGADOR - Iniciando apuração...")
+    logger.info("INVESTIGADOR — iniciando apuração.")
 
     historico = _buscar_historico(texto)
 
-    query = f"fact check verificação notícia: {texto[:200]}"
+    query = f"{texto[:150]} notícia oficial hoje"
     try:
-        resultados_web = list[dict] = _get_search().invoke({"query": query})
+        resultados_brutos = _get_search().invoke({"query": query})
+        resultados_normalizados = []
+
+        lista_final = []
+        if isinstance(resultados_brutos, dict):
+            lista_final = resultados_brutos.get("results", [])
+        elif isinstance(resultados_brutos, list):
+            lista_final = resultados_brutos
+
+        for r in lista_final:
+            if isinstance(r, dict):
+                resultados_normalizados.append({
+                    "url": r.get("url", ""),
+                    "content": r.get("content", r.get("snippet", ""))
+                })
+        
+        logger.info(f"INVESTIGADOR — Sucesso: {len(resultados_normalizados)} fontes reais encontradas.")
+
     except Exception as exc:
-        logger.error("Falha na busca web: %s", exc)
-        resultados_web = [{"url": "", "content": f"Busca indisponível: {exc}"}]
+        logger.error(f"FALHA REAL NA BUSCA: {str(exc)}")
+        resultados_normalizados = []
 
     logger.info(
-        "INVESTIGADOR - Concluído. Web: %d resultado(s). Histórico: %s",
-        len(resultados_web),
+        "INVESTIGADOR — concluído. Web: %d resultado(s). Histórico: %s",
+        len(resultados_normalizados),
         "encontrado" if historico else "sem match",
     )
 
     return {
         **state,
         "evidencias_csv": historico,
-        "evidencias_web": resultados_web,
-        "passo_atual": "investigacao_concluida"
+        "evidencias_web": resultados_normalizados,
+        "passo_atual": "investigacao_concluida",
     }
 
 # AGENTE DEFENSOR - Analisa se existem fontes que contextualizam/ validam a notícia
@@ -96,10 +124,7 @@ def defensor(state: AgentState) -> AgentState:
 
     logger.info("DEFENSOR - Buscando fontes de validação...")
 
-    evidencias_formatadas = "\n".join(
-        f"- [{r.get('url', 'sem url')}]: {r.get('content', '')[:300]}"
-        for r in (state.get("evidencias_web") or [])
-    )
+    evidencias_formatadas = evidencias_formatadas = _formatar_evidencias(state.get("evidencias_web"))
     
     prompt = f"""Você é um jornalista sênior especializado em verificação de fatos.
 
@@ -122,17 +147,14 @@ def defensor(state: AgentState) -> AgentState:
 
     return {
     **state, 
-    "analise_agentes": [f"[DEFENSOR]\n{resposta.content}"]
+    "analises_agentes":[f"DEFENSOR -{resposta.content}"]
     }
 
 # AGENTE JUIZ - Emite o veredito final com score de confiança e justificativa
 def juiz(state: AgentState) -> AgentState:
-    logger.infor("JUIZ - Analisando provas para veredito final...")
+    logger.info("JUIZ - Analisando provas para veredito final...")
 
-    evidencias_web_fmt = "\n".join(
-        f"- [{r.get('url', '')}]: {r.get('content', '')[:300]}"
-        for r in (state.get("evidencias_web") or [])
-    )
+    evidencias_web_fmt = _formatar_evidencias(state.get("evidencias_web"))
 
     prompt = f"""Você é o Verificador-Chefe de uma agência de checagem de fatos de alto rigor.
 
@@ -145,6 +167,8 @@ def juiz(state: AgentState) -> AgentState:
 
     HISTÓRICO LOCAL (Fake.br):
     {state.get('evidencias_csv') or 'Sem correspondência histórica.'}
+    ATENÇÃO: O histórico local é apenas um sinal auxiliar. Coincidência de palavras
+    não é prova de falsidade. Priorize SEMPRE as evidências da web.
 
     ANÁLISE DO DEFENSOR:
     {chr(10).join(state.get('analises_agentes') or ['Sem análise prévia.'])}
@@ -157,6 +181,12 @@ def juiz(state: AgentState) -> AgentState:
     VEREDITO: [REAL | FAKE | IMPRECISO]
     SCORE: [0-100, onde 100 = certeza absoluta de veracidade]
     JUSTIFICATIVA: [Exatamente 2 frases objetivas explicando a decisão]
+
+    ⚠️ REGRA CRÍTICA DE DECISÃO:
+    1. Se 'PESQUISA WEB' retornar 'Sem resultados' ou 0 fontes, NÃO classifique como FAKE.
+    2. Nestes casos, o veredito DEVE ser 'IMPRECISO'. 
+    3. JUSTIFICATIVA deve ser: 'Não foram encontradas fontes oficiais até o momento para confirmar ou negar o fato.'
+    4. Atribua SCORE: 50 para casos sem evidências.
     """
     
     resposta = _get_llm().invoke(prompt)
@@ -174,6 +204,5 @@ def juiz(state: AgentState) -> AgentState:
         **state, 
         "veredito_final": veredito_final, 
         "score": score_final,
-        "analise_agentes": [f"[JUIZ]\n{conteudo}"],
-        "passo_atual": "veredito_emitido"
+        "analises_agentes":[f"JUIZ - {conteudo}"],
     }

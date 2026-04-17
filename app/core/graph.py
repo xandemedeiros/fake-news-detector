@@ -1,7 +1,8 @@
+from __future__ import annotations
+from functools import lru_cache
 from langgraph.graph import StateGraph, END
 from app.core.agents import investigador, defensor, juiz
 from app.core.state import AgentState
-from __future__ import annotations
 import logging
 
 logger = logging.getLogger(__name__)

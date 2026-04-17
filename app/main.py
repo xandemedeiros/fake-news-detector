@@ -1,8 +1,8 @@
+from __future__ import annotations
 import time
 from fastapi import FastAPI, HTTPException, Request
 from app.api.schema import AnalysisRequest, AnalysisResponse
 from app.core.graph import get_engine
-from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,7 +37,7 @@ def health_check():
 
 @app.post("/analisar", response_model=AnalysisResponse, tags=["Análise"])
 async def analisar_noticia(request: AnalysisRequest, req: Request):
-    logger.info("Nova análise - IP: %s | chars: %d", req.cleint.host, len(request.texto))
+    logger.info("Nova análise - IP: %s | chars: %d", req.client.host,len(request.texto))
     inicio = time.perf_counter()
 
     try:
