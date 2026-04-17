@@ -165,7 +165,7 @@ def juiz(state: AgentState) -> AgentState:
     {evidencias_web_fmt or 'Sem resultados.'}
 
     HISTÓRICO LOCAL (Fake.br):
-    {state.get['evidencias_csv'] or 'Sem correspondência histórica.'}
+    {state.get('evidencias_csv') or 'Sem correspondência histórica.'}
     ATENÇÃO: O histórico local é apenas um sinal auxiliar. Coincidência de palavras
     não é prova de falsidade. Priorize SEMPRE as evidências da web.
 

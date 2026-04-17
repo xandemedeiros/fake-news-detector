@@ -3,7 +3,7 @@ import streamlit as st
 import requests
 import os
 
-API_URL = os.getenv("API_UTL", "http://127.0.0.1:8000/analisar")
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/analisar")
 
 st.set_page_config(
     page_title="Fake News Detector",
@@ -83,9 +83,14 @@ if botao:
     st.divider()
 
     st.subheader("Análise Detalhada dos Agentes")
-    for i, motivo in enumerate(data.get("justificativas", []), 1):
-        with st.expander(f"Agente {i}", expanded=(i == len(data.get('justificativas', [])))):
-            st.markdown(motivo)
+    justificativas = data.get("justificativas", [])
+    for i, motivo in enumerate(justificativas):
+                header = "Análise Adicional"
+                if "DEFENSOR" in motivo: header = "Agente Defensor"
+                if "JUIZ" in motivo: header = "Veredito do Juiz"
+                
+                with st.expander(header, expanded=(header == "Veredito do Juiz")):
+                    st.markdown(f'<div class="justification-text">{motivo}</div>', unsafe_allow_html=True)
 
     fontes = data.get("fontes_verificadas", [])
     with st.expander(f"Fontes Consultadas ({len(fontes)})", expanded=False):
