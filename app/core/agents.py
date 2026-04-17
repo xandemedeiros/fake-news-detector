@@ -116,7 +116,6 @@ def investigador(state: AgentState) -> AgentState:
         **state,
         "evidencias_csv": historico,
         "evidencias_web": resultados_normalizados,
-        "passo_atual": "investigacao_concluida",
     }
 
 # AGENTE DEFENSOR - Analisa se existem fontes que contextualizam/ validam a notícia
@@ -124,7 +123,7 @@ def defensor(state: AgentState) -> AgentState:
 
     logger.info("DEFENSOR - Buscando fontes de validação...")
 
-    evidencias_formatadas = evidencias_formatadas = _formatar_evidencias(state.get("evidencias_web"))
+    evidencias_formatadas = _formatar_evidencias(state.get("evidencias_web"))
     
     prompt = f"""Você é um jornalista sênior especializado em verificação de fatos.
 
@@ -166,7 +165,7 @@ def juiz(state: AgentState) -> AgentState:
     {evidencias_web_fmt or 'Sem resultados.'}
 
     HISTÓRICO LOCAL (Fake.br):
-    {state.get('evidencias_csv') or 'Sem correspondência histórica.'}
+    {state.get['evidencias_csv'] or 'Sem correspondência histórica.'}
     ATENÇÃO: O histórico local é apenas um sinal auxiliar. Coincidência de palavras
     não é prova de falsidade. Priorize SEMPRE as evidências da web.
 

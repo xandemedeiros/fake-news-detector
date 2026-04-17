@@ -48,7 +48,6 @@ async def analisar_noticia(request: AnalysisRequest, req: Request):
             "evidencias_csv": None,
             "veredito_final": None,
             "score": None,
-            "passo_atual": "inicio"
         }
     
         resultado = await get_engine().ainvoke(initial_state)

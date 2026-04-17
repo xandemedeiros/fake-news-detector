@@ -8,4 +8,3 @@ class AgentState(TypedDict):
     analises_agentes: Annotated[List[str], operator.add]
     veredito_final: Optional[str]
     score: Optional[int]
-    passo_atual: str
