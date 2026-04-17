@@ -1,14 +1,26 @@
 #!/bin/bash
+set -euo pipefail
+trap "echo 'Encerrando...'; kill 0" EXIT
 
-trap "kill 0" EXIT
+echo "Fake News Detector"
+echo "=============================="
 
-echo "Iniciando o Detector de Fake News..."
-echo "================================="
+if [ ! -f .env ]; then
+  echo "Arquivo .env não encontrado. Copie .env.example e configure as chaves."
+  exit 1
+fi
 
-echo "Ligando o Backend..."
-uvicorn app.main:app --reload &
+echo "Iniciando backend..."
+uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+BACKEND_PID=$!
 
-sleep 3
+echo "Aguardando backend..."
+for i in {1..10}; do
+  curl -sf http://localhost:8000/ > /dev/null && break
+  sleep 1
+done
 
-echo "Ligando o Frontend..."
-streamlit run app/frontend.py
+echo "Iniciando frontend..."
+API_URL=http://127.0.0.1:8000/analisar streamlit run app/frontend.py
+
+wait $BACKEND_PID
