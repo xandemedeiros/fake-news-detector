@@ -1,45 +1,84 @@
 import time
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from app.api.schema import AnalysisRequest, AnalysisResponse
-from app.core.graph import engine_detect
+from app.core.graph import get_engine
+from __future__ import annotations
+import logging
+from contextlib import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
+
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Aquecendo engine de agentes...")
+    get_engine()
+    yield
+    logger.info("Encerrando aplicação.")
+
 
 app = FastAPI(
     title="Fake News Detector",
-    description="API de análise de desinformação baseada em múltiplos agentes de IA",
-    version="1.0.0"
+    description="API de análise de desinformação com múltiplos agentes de IA",
+    version="2.0.0",
+    lifespan=lifespan,
     )
 
-@app.get("/")
-def read_root():
-    return {"message": "Fake News Detector API is online", "docs": "/docs"}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://localhost:8501"],
+    allow_methods=["POST", "GET"],
+    allow_headers=["*"],
+)
 
-@app.post("/analisar", response_model=AnalysisResponse)
-async def analisar_noticia(request: AnalysisRequest):
-    inicio_processamento = time.time()
+@app.get("/", tags=["Health"])
+def health_check():
+    return {"status": "online", "docs": "/docs"}
+
+@app.post("/analisar", response_model=AnalysisResponse, tags=["Análise"])
+async def analisar_noticia(request: AnalysisRequest, req: Request):
+    logger.info("Nova análise - IP: %s | chars: %d", req.cleint.host, len(request.texto))
+    inicio = time.perf_counter()
 
     try:
         initial_state= {
             "texto_original": request.texto,
-            "analise_xyz": [],
+            "analises_agentes": [],
             "evidencias_web": [],
+            "evidencias_csv": None,
+            "veredito_final": None,
+            "score": None,
             "passo_atual": "inicio"
         }
     
-        resultado = await engine_detect.ainvoke(initial_state)
-        tempo_total = round(time.time() - inicio_processamento, 2)
+        resultado = await get_engine().ainvoke(initial_state)
+
+    except Exception as exc:
+        logger.exception("Falha no pipeline de agentes: %s", exc)
+        raise HTTPException(status_code=500, detail="Erro interno no processamento dos agentes")
     
-        return {
-            "veredito": resultado.get("veredito_final", "NÃO IDENTIFICADO"),
-            "confianca": f"{resultado.get('score', 0)}%",
-            "motivos_xyz": resultado.get("analise_xyz", []),
-            "fontes_verificadas": [f.get('url') for f in resultado.get('evidencias_web', []) if isinstance(f, dict) and f.get('url')],
-            "tempo_execucao": tempo_total
-        }
+    tempo_total = round(time.perf_counter() - inicio, 2)
+    logger.info(
+        "Análise concluída - veredito: %s | score: %s | tempo: %ss",
+        resultado.get("veredito_final"),
+        resultado.get("score"),
+        tempo_total,
+    )
     
-    except Exception as e:
-        print(f"Erro interno: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno no processamento dos agentes.")
+    fontes = [
+        f.get("url", "")
+        for f in (resultado.get("evidencias_web") or [])
+        if isinstance(f, dict) and f.get("url")
+    ]
+    
+    return AnalysisResponse (
+            veredito = resultado.get("veredito_final", "IMPRECISO"),
+            confianca = f"{resultado.get('score', 0)}%",
+            justificativas = resultado.get("analises_agentes", []),
+            fontes_verificadas = fontes,
+            tempo_execucao = tempo_total,
+    )
     
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=False)
