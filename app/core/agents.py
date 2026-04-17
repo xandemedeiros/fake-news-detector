@@ -147,7 +147,7 @@ def defensor(state: AgentState) -> AgentState:
 
     return {
     **state, 
-    "analises_agentes":[f"DEFENSOR -{resposta.content}"]
+    "analises_agentes":[f"AGENTE DEFENSOR - {resposta.content}"]
     }
 
 # AGENTE JUIZ - Emite o veredito final com score de confiança e justificativa
@@ -200,9 +200,15 @@ def juiz(state: AgentState) -> AgentState:
 
     logger.info("JUIZ - Veredito: %s | score: %d", veredito_final, score_final)
 
+    texto_formatado = (
+        f"VEREDITO FINAL: {veredito_final}\n\n"
+        f"SCORE DE VERACIDADE: {score_final}%\n\n"
+        f"JUSTIFICATIVA: {conteudo.split('JUSTIFICATIVA:')[-1].strip()}"
+    )
+
     return {
         **state, 
         "veredito_final": veredito_final, 
         "score": score_final,
-        "analises_agentes":[f"JUIZ - {conteudo}"],
+        "analises_agentes":[f"DECISÃO DO JUIZ -\n{texto_formatado}"],
     }

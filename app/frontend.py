@@ -77,7 +77,7 @@ if botao:
             </div>
         """, unsafe_allow_html=True)
 
-        st.progress(score / 100, text=f"Score de veracidade: {score}%")
+        st.progress(score / 100, text=f"\nScore de veracidade: {score}%")
         st.caption(f"Processado em {data.get('tempo_execucao', '?')}s")
 
     st.divider()
