@@ -181,7 +181,7 @@ def juiz(state: AgentState) -> AgentState:
     SCORE: [0-100, onde 100 = certeza absoluta de veracidade]
     JUSTIFICATIVA: [Exatamente 2 frases objetivas explicando a decisão]
 
-    ⚠️ REGRA CRÍTICA DE DECISÃO:
+    REGRA CRÍTICA DE DECISÃO:
     1. Se 'PESQUISA WEB' retornar 'Sem resultados' ou 0 fontes, NÃO classifique como FAKE.
     2. Nestes casos, o veredito DEVE ser 'IMPRECISO'. 
     3. JUSTIFICATIVA deve ser: 'Não foram encontradas fontes oficiais até o momento para confirmar ou negar o fato.'
