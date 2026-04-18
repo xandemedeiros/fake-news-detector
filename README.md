@@ -104,6 +104,21 @@ Obtenha suas chaves em:
 
 O script inicia o backend, aguarda ele estar disponível e sobe o frontend automaticamente.
 
+| Serviço | URL |
+|---|---|
+| Frontend (Streamlit) | http://localhost:8501 |
+| API (FastAPI) | http://localhost:8000 |
+| Documentação da API | http://localhost:8000/docs |
+
+---
+
+## Demo Online
+
+| Serviço | URL |
+|---|---|
+| Frontend | https://fake-news-detector-agents.streamlit.app |
+| API (Swagger) | https://fake-news-detector-cala.onrender.com/docs |
+
 ---
 
 ## API
