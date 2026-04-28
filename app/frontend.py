@@ -41,7 +41,7 @@ if botao:
         st.error("O texto precisa ter pelo menos 20 caracteres.")
         st.stop()
 
-    with st.spinner("Agentes investigando... isso pode levar alguns segundos."):
+    with st.spinner("Investigando... isso pode levar alguns segundos."):
         try:
             response = requests.post(API_URL, json={"texto": texto_input}, timeout=120)
             response.raise_for_status()
@@ -64,14 +64,12 @@ if botao:
     score = int(score_raw) if score_raw.isdigit() else 0
 
     COR_MAP = {"REAL": "#2ecc71", "FAKE": "#e74c3c", "IMPRECISO": "#f39c12"}
-    EMOJI_MAP = {"REAL": "✅", "FAKE": "🚨", "IMPRECISO": "⚠️"}
     cor = COR_MAP.get(veredito, "#95a5a6")
-    emoji = EMOJI_MAP.get(veredito, "❓")
 
     with col_result:
         st.markdown(f"""
             <div class="verdict-box" style="background-color:{cor}22; border: 2px solid {cor};">
-                <h1 style="color:{cor}; margin:0;">{emoji} {veredito}</h1>
+                <h1 style="color:{cor}; margin:0;"> {veredito}</h1>
                 <p style="color:{cor}; font-size:1.1rem; margin:0.5rem 0 0 0;">
                     Confiança: <strong>{data.get('confianca', 'N/A')}</strong>
                 </p>
